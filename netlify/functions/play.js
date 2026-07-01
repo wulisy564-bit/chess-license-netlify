@@ -2,12 +2,27 @@ const fs = require("fs");
 const path = require("path");
 const { getAuth, requireAccessResponse } = require("./lib/auth");
 
+function findGameFile() {
+  const candidates = [
+    path.join(process.cwd(), "protected-game", "index.html"),
+    path.join(__dirname, "..", "..", "protected-game", "index.html"),
+    path.join(__dirname, "protected-game", "index.html"),
+    path.join("/var/task", "protected-game", "index.html")
+  ];
+
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate)) return candidate;
+  }
+
+  throw new Error(`Protected game file not found. Checked: ${candidates.join(", ")}`);
+}
+
 exports.handler = async (event) => {
   const auth = await getAuth(event);
   const blocked = requireAccessResponse(event, auth);
   if (blocked) return blocked;
 
-  const gamePath = path.join(__dirname, "..", "..", "protected-game", "index.html");
+  const gamePath = findGameFile();
   const html = fs.readFileSync(gamePath, "utf8");
 
   return {

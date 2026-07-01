@@ -1,7 +1,8 @@
 const fs = require("fs");
+const os = require("os");
 const path = require("path");
 
-const LOCAL_DATA_DIR = path.join(__dirname, "..", "..", "..", ".local-data");
+const LOCAL_DATA_DIR = path.join(os.tmpdir(), "chess-license-netlify-data");
 const LOCAL_DB_FILE = path.join(LOCAL_DATA_DIR, "db.json");
 
 const DEFAULT_DB = {
@@ -22,9 +23,13 @@ function clone(value) {
 }
 
 async function getBlobStore() {
-  if (!process.env.NETLIFY) return null;
-  const { getStore } = await import("@netlify/blobs");
-  return getStore("chess-license-db");
+  try {
+    const { getStore } = await import("@netlify/blobs");
+    return getStore("chess-license-db");
+  } catch (error) {
+    if (process.env.NETLIFY) throw error;
+    return null;
+  }
 }
 
 function ensureLocalDb() {
