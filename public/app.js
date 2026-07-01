@@ -5,6 +5,7 @@ const redeemTab = document.querySelector("#redeemTab");
 const statusBox = document.querySelector("#status");
 const playLink = document.querySelector("#playLink");
 const logoutButton = document.querySelector("#logoutButton");
+let currentUser = null;
 
 function getDeviceId() {
   const key = "chess_device_id";
@@ -28,6 +29,18 @@ function clearSessionToken() {
   localStorage.removeItem("chess_session_token");
 }
 
+function getSavedPhone() {
+  return localStorage.getItem("chess_user_phone") || currentUser?.phone || "";
+}
+
+function setSavedPhone(phone) {
+  if (phone) localStorage.setItem("chess_user_phone", phone);
+}
+
+function clearSavedPhone() {
+  localStorage.removeItem("chess_user_phone");
+}
+
 function getPlayUrl() {
   return `/.netlify/functions/play?deviceId=${encodeURIComponent(getDeviceId())}&token=${encodeURIComponent(getSessionToken())}`;
 }
@@ -38,6 +51,7 @@ async function api(path, options = {}) {
     headers: {
       "content-type": "application/json",
       "x-device-id": getDeviceId(),
+      ...(getSavedPhone() ? { "x-phone": getSavedPhone() } : {}),
       ...(getSessionToken() ? { authorization: `Bearer ${getSessionToken()}` } : {})
     },
     ...options
@@ -56,9 +70,11 @@ function setTab(tab) {
 }
 
 function render(user) {
+  currentUser = user;
   logoutButton.classList.toggle("hidden", !user);
 playLink.classList.toggle("hidden", !user?.hasAccess);
   playLink.href = getPlayUrl();
+  if (user?.phone) setSavedPhone(user.phone);
 
   if (!user) {
     statusBox.textContent = "未登录。请先用手机号登录。";
@@ -81,16 +97,12 @@ redeemTab.addEventListener("click", () => setTab("redeem"));
 async function enterGame() {
   statusBox.textContent = "正在进入游戏...";
   try {
-    const data = await api("/api/check-access", {
-      method: "POST",
-      body: "{}"
-    });
-    setSessionToken(data.token);
     const response = await fetch("/.netlify/functions/play", {
       credentials: "include",
       headers: {
         authorization: `Bearer ${getSessionToken()}`,
-        "x-device-id": getDeviceId()
+        "x-device-id": getDeviceId(),
+        "x-phone": getSavedPhone()
       }
     });
     const html = await response.text();
@@ -131,6 +143,7 @@ loginForm.addEventListener("submit", async (event) => {
       body: JSON.stringify({ phone })
     });
     setSessionToken(data.token);
+    setSavedPhone(data.user?.phone);
     render(data.user);
   } catch (error) {
     statusBox.textContent = error.message;
@@ -147,6 +160,7 @@ redeemForm.addEventListener("submit", async (event) => {
       body: JSON.stringify({ code, deviceId: getDeviceId() })
     });
     setSessionToken(data.token);
+    setSavedPhone(data.user?.phone);
     render(data.user);
   } catch (error) {
     statusBox.textContent = error.message;
@@ -156,12 +170,14 @@ redeemForm.addEventListener("submit", async (event) => {
 logoutButton.addEventListener("click", async () => {
   await api("/api/logout", { method: "POST", body: "{}" });
   clearSessionToken();
+  clearSavedPhone();
   render(null);
 });
 
 api("/api/me")
   .then((data) => {
     setSessionToken(data.token);
+    setSavedPhone(data.user?.phone);
     render(data.user);
   })
   .catch(() => render(null));
