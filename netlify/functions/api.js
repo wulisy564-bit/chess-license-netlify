@@ -99,7 +99,7 @@ exports.handler = async (event) => {
       const auth = await getAuth(event);
       const blocked = requireAccessResponse(event, auth);
       if (blocked) return blocked;
-      return json(200, { ok: true, user: publicUser(auth.user) });
+      return json(200, { ok: true, token: auth.token, user: publicUser(auth.user) });
     }
 
     return json(404, { ok: false, message: "API not found" });

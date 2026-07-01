@@ -53,7 +53,7 @@ function setTab(tab) {
 
 function render(user) {
   logoutButton.classList.toggle("hidden", !user);
-  playLink.classList.toggle("hidden", !user?.hasAccess);
+playLink.classList.toggle("hidden", !user?.hasAccess);
   playLink.href = `/.netlify/functions/play?deviceId=${encodeURIComponent(getDeviceId())}&token=${encodeURIComponent(getSessionToken())}`;
 
   if (!user) {
@@ -73,6 +73,22 @@ function render(user) {
 
 loginTab.addEventListener("click", () => setTab("login"));
 redeemTab.addEventListener("click", () => setTab("redeem"));
+
+playLink.addEventListener("click", async (event) => {
+  event.preventDefault();
+  statusBox.textContent = "正在进入游戏...";
+  try {
+    const data = await api("/api/check-access", {
+      method: "POST",
+      body: "{}"
+    });
+    setSessionToken(data.token);
+    const url = `/.netlify/functions/play?deviceId=${encodeURIComponent(getDeviceId())}&token=${encodeURIComponent(getSessionToken())}`;
+    window.location.href = url;
+  } catch (error) {
+    statusBox.textContent = error.message;
+  }
+});
 
 loginForm.addEventListener("submit", async (event) => {
   event.preventDefault();
