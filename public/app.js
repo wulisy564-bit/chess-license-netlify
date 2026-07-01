@@ -16,12 +16,25 @@ function getDeviceId() {
   return id;
 }
 
+function getSessionToken() {
+  return localStorage.getItem("chess_session_token") || "";
+}
+
+function setSessionToken(token) {
+  if (token) localStorage.setItem("chess_session_token", token);
+}
+
+function clearSessionToken() {
+  localStorage.removeItem("chess_session_token");
+}
+
 async function api(path, options = {}) {
   const response = await fetch(path, {
     credentials: "include",
     headers: {
       "content-type": "application/json",
-      "x-device-id": getDeviceId()
+      "x-device-id": getDeviceId(),
+      ...(getSessionToken() ? { authorization: `Bearer ${getSessionToken()}` } : {})
     },
     ...options
   });
@@ -41,7 +54,7 @@ function setTab(tab) {
 function render(user) {
   logoutButton.classList.toggle("hidden", !user);
   playLink.classList.toggle("hidden", !user?.hasAccess);
-  playLink.href = `/play?deviceId=${encodeURIComponent(getDeviceId())}`;
+  playLink.href = `/play?deviceId=${encodeURIComponent(getDeviceId())}&token=${encodeURIComponent(getSessionToken())}`;
 
   if (!user) {
     statusBox.textContent = "未登录。请先用手机号登录。";
@@ -70,6 +83,7 @@ loginForm.addEventListener("submit", async (event) => {
       method: "POST",
       body: JSON.stringify({ phone })
     });
+    setSessionToken(data.token);
     render(data.user);
   } catch (error) {
     statusBox.textContent = error.message;
@@ -85,6 +99,7 @@ redeemForm.addEventListener("submit", async (event) => {
       method: "POST",
       body: JSON.stringify({ code, deviceId: getDeviceId() })
     });
+    setSessionToken(data.token);
     render(data.user);
   } catch (error) {
     statusBox.textContent = error.message;
@@ -93,6 +108,7 @@ redeemForm.addEventListener("submit", async (event) => {
 
 logoutButton.addEventListener("click", async () => {
   await api("/api/logout", { method: "POST", body: "{}" });
+  clearSessionToken();
   render(null);
 });
 

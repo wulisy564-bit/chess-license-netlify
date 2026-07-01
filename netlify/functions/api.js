@@ -42,7 +42,7 @@ exports.handler = async (event) => {
       db.users[phone].activeSession = token;
       await writeDb(db);
 
-      return json(200, { ok: true, user: publicUser(db.users[phone]) }, {
+      return json(200, { ok: true, token, user: publicUser(db.users[phone]) }, {
         "set-cookie": setSessionCookie(token)
       });
     }
@@ -92,7 +92,7 @@ exports.handler = async (event) => {
       auth.user.deviceId = deviceId;
       await writeDb(auth.db);
 
-      return json(200, { ok: true, user: publicUser(auth.user) });
+      return json(200, { ok: true, token: auth.token, user: publicUser(auth.user) });
     }
 
     if (method === "POST" && route === "check-access") {

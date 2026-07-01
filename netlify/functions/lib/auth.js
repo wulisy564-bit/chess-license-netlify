@@ -56,7 +56,11 @@ function publicUser(user) {
 }
 
 async function getAuth(event) {
-  const token = parseCookies(event.headers.cookie || event.headers.Cookie || "").chess_session;
+  const headers = event.headers || {};
+  const query = event.queryStringParameters || {};
+  const authorization = headers.authorization || headers.Authorization || "";
+  const bearer = authorization.startsWith("Bearer ") ? authorization.slice(7) : "";
+  const token = parseCookies(headers.cookie || headers.Cookie || "").chess_session || bearer || query.token;
   if (!token) return null;
 
   const db = await readDb();
