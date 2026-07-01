@@ -30,6 +30,7 @@ function json(statusCode, body) {
 
 function parseTokenAndDevice(event) {
   const query = { ...(event.queryStringParameters || {}) };
+  const headers = event.headers || {};
   const rawParts = [
     event.rawQuery,
     event.rawQueryString,
@@ -44,9 +45,23 @@ function parseTokenAndDevice(event) {
   }
 
   return {
-    token: query.token || "",
+    token: query.token || parseCookies(headers.cookie || headers.Cookie || "").chess_session || parseBearer(headers.authorization || headers.Authorization || ""),
     deviceId: query.deviceId || ""
   };
+}
+
+function parseCookies(header = "") {
+  const cookies = {};
+  for (const part of header.split(";")) {
+    const [rawKey, ...rawValue] = part.trim().split("=");
+    if (!rawKey) continue;
+    cookies[rawKey] = decodeURIComponent(rawValue.join("="));
+  }
+  return cookies;
+}
+
+function parseBearer(value = "") {
+  return value.startsWith("Bearer ") ? value.slice(7) : "";
 }
 
 async function getPlayAuth(event) {
