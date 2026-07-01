@@ -1,0 +1,22 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+  functions = "netlify/functions"
+
+[functions]
+  included_files = ["protected-game/**"]
+
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/api/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/play"
+  to = "/.netlify/functions/play"
+  status = 200
+
+[[redirects]]
+  from = "/game/*"
+  to = "/"
+  status = 302

@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>少儿象棋训练营</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <section class="hero">
+        <div>
+          <p class="eyebrow">少儿象棋启蒙</p>
+          <h1>孩子爱玩的象棋小游戏</h1>
+          <p class="sub">家长购买后绑定账号和设备，别人拿到链接也无法直接使用。</p>
+        </div>
+        <div class="panel">
+          <div class="tabs">
+            <button class="tab active" id="loginTab" type="button">登录</button>
+            <button class="tab" id="redeemTab" type="button">兑换</button>
+          </div>
+
+          <form id="loginForm" class="form">
+            <label for="phone">手机号</label>
+            <input id="phone" name="phone" inputmode="tel" placeholder="例如 13800138000" />
+            <button class="primary" type="submit">登录 / 注册</button>
+          </form>
+
+          <form id="redeemForm" class="form hidden">
+            <label for="code">兑换码</label>
+            <input id="code" name="code" placeholder="测试码 TEST-2026" />
+            <button class="primary" type="submit">解锁游戏</button>
+          </form>
+
+          <div class="status" id="status">正在检查登录状态...</div>
+          <div class="actions">
+            <a class="play hidden" id="playLink" href="/play">进入游戏</a>
+            <button class="ghost hidden" id="logoutButton" type="button">退出</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="features">
+        <article>
+          <strong>链接可分享</strong>
+          <span>但完整游戏必须登录并通过服务器授权。</span>
+        </article>
+        <article>
+          <strong>兑换码解锁</strong>
+          <span>你收款后发给家长一个码，码只能被一个账号使用。</span>
+        </article>
+        <article>
+          <strong>设备绑定</strong>
+          <span>首次兑换时绑定当前设备，降低账号转借。</span>
+        </article>
+      </section>
+    </main>
+    <script src="/app.js"></script>
+  </body>
+</html>

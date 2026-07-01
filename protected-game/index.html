@@ -1,0 +1,991 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>中国象棋小游戏</title>
+  <style>
+    :root {
+      --ink: #1f252d;
+      --muted: #667085;
+      --paper: #fffaf0;
+      --panel: #ffffff;
+      --board: #f5d39a;
+      --wood: #8d4a24;
+      --line: #79451f;
+      --red: #c92f2f;
+      --black: #222833;
+      --green: #1f9d68;
+      --blue: #3478f6;
+      font-family: "Microsoft YaHei", "PingFang SC", system-ui, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 10% 8%, rgba(201, 47, 47, .16), transparent 26%),
+        radial-gradient(circle at 92% 4%, rgba(31, 157, 104, .16), transparent 24%),
+        #f7f1e4;
+    }
+
+    button {
+      border: 0;
+      font: inherit;
+      cursor: pointer;
+      padding: 0;
+      appearance: none;
+      -webkit-appearance: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .app {
+      width: min(1120px, 100%);
+      margin: 0 auto;
+      padding: max(14px, env(safe-area-inset-top)) 14px max(18px, env(safe-area-inset-bottom));
+      display: grid;
+      gap: 14px;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(28px, 8vw, 48px);
+      line-height: 1.05;
+      letter-spacing: 0;
+    }
+
+    .sub {
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: 15px;
+    }
+
+    .score {
+      min-width: 104px;
+      padding: 10px 12px;
+      border: 1px solid #e4d6bd;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, .72);
+      text-align: center;
+      box-shadow: 0 4px 0 rgba(0, 0, 0, .05);
+    }
+
+    .score strong {
+      display: block;
+      font-size: 24px;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(310px, 680px) minmax(250px, 1fr);
+      gap: 16px;
+      align-items: start;
+    }
+
+    .board-wrap {
+      padding: clamp(10px, 2vw, 18px);
+      border-radius: 8px;
+      background: linear-gradient(135deg, #9d5b2d, #693619);
+      box-shadow: 0 18px 42px rgba(72, 43, 19, .22);
+    }
+
+    .board {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 9 / 10;
+      border: 4px solid var(--line);
+      background: var(--board);
+      overflow: visible;
+      touch-action: manipulation;
+    }
+
+    .grid-line {
+      position: absolute;
+      pointer-events: none;
+      background: rgba(96, 50, 22, .66);
+    }
+
+    .grid-line.v {
+      top: 0;
+      width: 2px;
+      height: 100%;
+      transform: translateX(-50%);
+    }
+
+    .grid-line.h {
+      left: 0;
+      width: 100%;
+      height: 2px;
+      transform: translateY(-50%);
+    }
+
+    .river {
+      position: absolute;
+      left: 0;
+      top: calc(4 * 100% / 9);
+      width: 100%;
+      height: calc(100% / 9);
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      place-items: center;
+      border-top: 2px solid rgba(96, 50, 22, .66);
+      border-bottom: 2px solid rgba(96, 50, 22, .66);
+      color: rgba(96, 50, 22, .55);
+      font-size: clamp(20px, 5.8vw, 42px);
+      font-weight: 900;
+      letter-spacing: .16em;
+      pointer-events: none;
+    }
+
+    .palace {
+      position: absolute;
+      width: 24%;
+      height: 2px;
+      left: 38%;
+      background: rgba(96, 50, 22, .7);
+      transform-origin: center;
+      pointer-events: none;
+    }
+
+    .palace.a { top: 10.8%; transform: rotate(45deg); }
+    .palace.b { top: 10.8%; transform: rotate(-45deg); }
+    .palace.c { bottom: 10.8%; transform: rotate(45deg); }
+    .palace.d { bottom: 10.8%; transform: rotate(-45deg); }
+
+    .piece,
+    .move {
+      position: absolute;
+      transform: translate(-50%, -50%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      z-index: 3;
+      line-height: 1;
+      text-align: center;
+    }
+
+    .piece {
+      width: clamp(31px, 9.4%, 58px);
+      aspect-ratio: 1;
+      border: 3px solid currentColor;
+      color: var(--black);
+      background: radial-gradient(circle at 34% 26%, #fffaf0, #edc078 74%);
+      font-size: clamp(18px, 4.6vw, 32px);
+      font-weight: 900;
+      box-shadow: 0 8px 14px rgba(45, 28, 12, .25);
+      transition: transform .16s ease, box-shadow .16s ease, left .2s ease, top .2s ease;
+      overflow: hidden;
+    }
+
+    .piece.red { color: var(--red); }
+    .piece.black { color: var(--black); }
+    .piece.dim { opacity: .68; }
+    .piece.selected {
+      z-index: 5;
+      transform: translate(-50%, -50%) scale(1.12);
+      box-shadow: 0 12px 22px rgba(45, 28, 12, .26), 0 0 0 8px rgba(31, 157, 104, .2);
+    }
+    .piece.last {
+      z-index: 4;
+      opacity: 1;
+      box-shadow: 0 12px 22px rgba(45, 28, 12, .26), 0 0 0 8px rgba(52, 120, 246, .22);
+      animation: lastMovePulse 1.05s ease-in-out 3;
+    }
+
+    .move {
+      width: clamp(34px, 9.2%, 56px);
+      aspect-ratio: 1;
+      border: 3px solid #fff;
+      background: var(--green);
+      color: white;
+      font-size: clamp(13px, 3.2vw, 18px);
+      font-weight: 900;
+      box-shadow: 0 10px 18px rgba(31, 157, 104, .3), 0 0 0 8px rgba(31, 157, 104, .18);
+      z-index: 6;
+    }
+    .move.capture { background: var(--red); }
+
+    @keyframes lastMovePulse {
+      50% {
+        transform: translate(-50%, -50%) scale(1.12);
+        box-shadow: 0 12px 22px rgba(45, 28, 12, .28), 0 0 0 10px rgba(52, 120, 246, .32), 0 0 0 18px rgba(52, 120, 246, .12);
+      }
+    }
+
+    .panel {
+      display: grid;
+      gap: 12px;
+    }
+
+    .card {
+      padding: 16px;
+      border: 1px solid #e8dac2;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, .82);
+      box-shadow: 0 12px 30px rgba(72, 43, 19, .12);
+    }
+
+    .status {
+      min-height: 72px;
+      font-size: 18px;
+      font-weight: 800;
+      line-height: 1.45;
+    }
+
+    .status.good { color: #126b44; background: #ddf6e9; }
+    .status.bad { color: #9b1c1c; background: #ffe2df; }
+
+    .actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .difficulty {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+
+    .action {
+      min-height: 46px;
+      border-radius: 8px;
+      color: white;
+      font-weight: 900;
+      background: var(--green);
+      box-shadow: inset 0 -4px 0 rgba(0, 0, 0, .16);
+    }
+
+    .action.secondary {
+      color: var(--ink);
+      background: #fff6e7;
+      border: 1px solid #d8c4a5;
+    }
+
+    .level {
+      min-height: 42px;
+      border: 1px solid #d8c4a5;
+      border-radius: 8px;
+      color: var(--ink);
+      background: #fff6e7;
+      font-weight: 900;
+    }
+
+    .level.active {
+      color: white;
+      border-color: #18764f;
+      background: var(--green);
+      box-shadow: inset 0 -4px 0 rgba(0, 0, 0, .16);
+    }
+
+    .tips h2 {
+      margin: 0 0 8px;
+      font-size: 20px;
+    }
+
+    .tips p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.65;
+    }
+
+    .captured {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      min-height: 34px;
+    }
+
+    .tag {
+      padding: 5px 8px;
+      border-radius: 999px;
+      color: #8a261f;
+      background: #ffe5dc;
+      font-weight: 800;
+    }
+
+    @media (max-width: 820px) {
+      .layout { grid-template-columns: 1fr; }
+      header { align-items: flex-start; }
+      .panel { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 640px) {
+      body {
+        background: #f7f1e4;
+      }
+
+      .app {
+        gap: 8px;
+        padding: max(8px, env(safe-area-inset-top)) 6px max(10px, env(safe-area-inset-bottom));
+      }
+
+      header {
+        align-items: center;
+        gap: 8px;
+      }
+
+      h1 {
+        font-size: 24px;
+      }
+
+      .sub {
+        margin-top: 3px;
+        font-size: 12px;
+        line-height: 1.35;
+      }
+
+      .score {
+        min-width: 70px;
+        padding: 6px 8px;
+        font-size: 12px;
+      }
+
+      .score strong {
+        font-size: 20px;
+      }
+
+      .layout {
+        gap: 8px;
+      }
+
+      .board-wrap {
+        padding: 4px;
+        border-radius: 6px;
+        box-shadow: 0 8px 22px rgba(72, 43, 19, .16);
+      }
+
+      .board {
+        border-width: 2px;
+      }
+
+      .river {
+        font-size: 20px;
+        letter-spacing: .08em;
+      }
+
+      .piece {
+        width: clamp(25px, 7.5%, 36px);
+        border-width: 2px;
+        font-size: clamp(15px, 3.8vw, 21px);
+        box-shadow: 0 5px 10px rgba(45, 28, 12, .2);
+      }
+
+      .piece.selected {
+        transform: translate(-50%, -50%) scale(1.08);
+        box-shadow: 0 7px 14px rgba(45, 28, 12, .2), 0 0 0 5px rgba(31, 157, 104, .18);
+      }
+
+      .piece.last {
+        opacity: 1;
+        box-shadow: 0 7px 14px rgba(45, 28, 12, .2), 0 0 0 6px rgba(52, 120, 246, .28);
+      }
+
+      .move {
+        width: clamp(26px, 7.6%, 37px);
+        border-width: 2px;
+        font-size: clamp(11px, 3vw, 15px);
+        box-shadow: 0 6px 12px rgba(31, 157, 104, .22), 0 0 0 5px rgba(31, 157, 104, .16);
+      }
+
+      .panel {
+        gap: 8px;
+      }
+
+      .card {
+        padding: 10px 12px;
+        box-shadow: none;
+      }
+
+      .status {
+        min-height: 48px;
+        font-size: 15px;
+        line-height: 1.35;
+      }
+
+      .actions {
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+
+      .difficulty {
+        gap: 6px;
+      }
+
+      .action {
+        min-height: 42px;
+      }
+
+      .level {
+        min-height: 38px;
+        font-size: 14px;
+      }
+
+      .tips {
+        display: none;
+      }
+    }
+
+    @media (max-width: 520px) {
+      .app { padding-left: 6px; padding-right: 6px; }
+      .score { min-width: 70px; }
+    }
+
+    @media (max-width: 380px) {
+      h1 {
+        font-size: 21px;
+      }
+
+      .sub {
+        max-width: 220px;
+      }
+
+      .score {
+        min-width: 62px;
+      }
+
+      .piece {
+        width: 24px;
+        font-size: 14px;
+      }
+
+      .move {
+        width: 25px;
+        font-size: 11px;
+      }
+
+      .level {
+        font-size: 13px;
+      }
+    }
+
+    @media (max-width: 340px) {
+      .sub {
+        display: none;
+      }
+
+      .piece {
+        width: 22px;
+        font-size: 13px;
+      }
+
+      .move {
+        width: 23px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div>
+        <h1>中国象棋小游戏</h1>
+        <p class="sub">你走红方，小对手自动走黑方。点棋子，再点绿色位置。</p>
+      </div>
+      <div class="score"><strong id="moveCount">0</strong><span>已走步数</span></div>
+    </header>
+
+    <main class="layout">
+      <section class="board-wrap" aria-label="象棋棋盘">
+        <div class="board" id="board"></div>
+      </section>
+
+      <aside class="panel">
+        <div class="card status" id="status">轮到红方，点一颗红棋开始。</div>
+        <div class="actions">
+          <button class="action" id="restart" type="button">重新开始</button>
+          <button class="action secondary" id="voice" type="button">声音开</button>
+        </div>
+        <div class="difficulty" aria-label="选择对手难度">
+          <button class="level active" data-level="easy" type="button">初级</button>
+          <button class="level" data-level="medium" type="button">中级</button>
+          <button class="level" data-level="hard" type="button">高级</button>
+        </div>
+        <div class="card tips">
+          <h2 id="tipTitle">玩法提示</h2>
+          <p id="tipText">绿色圆点是可以走的位置，红色圆点代表可以吃子。手机微信里也可以用手指点。</p>
+        </div>
+        <div class="card tips">
+          <h2>已吃棋子</h2>
+          <div class="captured" id="captured"></div>
+        </div>
+      </aside>
+    </main>
+  </div>
+
+  <script>
+    const board = document.querySelector("#board");
+    const statusEl = document.querySelector("#status");
+    const tipTitle = document.querySelector("#tipTitle");
+    const tipText = document.querySelector("#tipText");
+    const moveCountEl = document.querySelector("#moveCount");
+    const capturedEl = document.querySelector("#captured");
+    const restartBtn = document.querySelector("#restart");
+    const voiceBtn = document.querySelector("#voice");
+    const levelButtons = [...document.querySelectorAll(".level")];
+
+    const pieceTips = {
+      general: ["帅和将", "帅、将只能在九宫里上下左右走一格。保护好它最重要。"],
+      advisor: ["仕和士", "仕、士只在九宫里斜走一格，像贴身护卫一样守在帅或将旁边。"],
+      elephant: ["相和象", "相、象走田字，不能过河；中间的象眼被挡住就不能走。"],
+      rook: ["车", "车沿横线或竖线走，路上不能有棋子挡住。"],
+      horse: ["马", "马走日字；旁边第一格被挡住就是蹩马腿。"],
+      cannon: ["炮", "炮平时像车一样走；吃子时，中间必须隔一颗棋子当炮架。"],
+      soldier: ["兵和卒", "兵、卒不能后退。过河前只向前，过河后能向前或左右走。"],
+    };
+
+    const startingPieces = [
+      ["r-rook-1", "rook", "车", "red", 0, 9], ["r-horse-1", "horse", "马", "red", 1, 9],
+      ["r-elephant-1", "elephant", "相", "red", 2, 9], ["r-advisor-1", "advisor", "仕", "red", 3, 9],
+      ["r-general", "general", "帅", "red", 4, 9], ["r-advisor-2", "advisor", "仕", "red", 5, 9],
+      ["r-elephant-2", "elephant", "相", "red", 6, 9], ["r-horse-2", "horse", "马", "red", 7, 9],
+      ["r-rook-2", "rook", "车", "red", 8, 9], ["r-cannon-1", "cannon", "炮", "red", 1, 7],
+      ["r-cannon-2", "cannon", "炮", "red", 7, 7], ["r-soldier-1", "soldier", "兵", "red", 0, 6],
+      ["r-soldier-2", "soldier", "兵", "red", 2, 6], ["r-soldier-3", "soldier", "兵", "red", 4, 6],
+      ["r-soldier-4", "soldier", "兵", "red", 6, 6], ["r-soldier-5", "soldier", "兵", "red", 8, 6],
+      ["b-rook-1", "rook", "车", "black", 0, 0], ["b-horse-1", "horse", "马", "black", 1, 0],
+      ["b-elephant-1", "elephant", "象", "black", 2, 0], ["b-advisor-1", "advisor", "士", "black", 3, 0],
+      ["b-general", "general", "将", "black", 4, 0], ["b-advisor-2", "advisor", "士", "black", 5, 0],
+      ["b-elephant-2", "elephant", "象", "black", 6, 0], ["b-horse-2", "horse", "马", "black", 7, 0],
+      ["b-rook-2", "rook", "车", "black", 8, 0], ["b-cannon-1", "cannon", "炮", "black", 1, 2],
+      ["b-cannon-2", "cannon", "炮", "black", 7, 2], ["b-soldier-1", "soldier", "卒", "black", 0, 3],
+      ["b-soldier-2", "soldier", "卒", "black", 2, 3], ["b-soldier-3", "soldier", "卒", "black", 4, 3],
+      ["b-soldier-4", "soldier", "卒", "black", 6, 3], ["b-soldier-5", "soldier", "卒", "black", 8, 3],
+    ].map(([id, kind, text, side, x, y]) => ({ id, kind, text, side, x, y }));
+
+    let pieces = [];
+    let selectedId = null;
+    let turn = "red";
+    let movesMade = 0;
+    let captured = [];
+    let gameOver = false;
+    let soundOn = true;
+    let lastMoveId = null;
+    let difficulty = "easy";
+
+    const difficultyNames = {
+      easy: "初级",
+      medium: "中级",
+      hard: "高级",
+    };
+
+    const pieceValue = {
+      general: 1000,
+      rook: 90,
+      cannon: 55,
+      horse: 50,
+      elephant: 24,
+      advisor: 22,
+      soldier: 12,
+    };
+
+    function speak(text) {
+      if (!soundOn || !("speechSynthesis" in window) || !("SpeechSynthesisUtterance" in window)) return;
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = "zh-CN";
+      utterance.rate = 0.9;
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(utterance);
+    }
+
+    function sound(type) {
+      if (!soundOn) return;
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContext) return;
+      const audio = new AudioContext();
+      const tone = audio.createOscillator();
+      const gain = audio.createGain();
+      tone.type = type === "win" ? "triangle" : type === "capture" ? "square" : type === "check" ? "sawtooth" : "sine";
+      tone.frequency.setValueAtTime(type === "win" ? 660 : type === "capture" ? 180 : type === "check" ? 520 : 320, audio.currentTime);
+      tone.frequency.exponentialRampToValueAtTime(type === "win" ? 990 : type === "capture" ? 90 : type === "check" ? 760 : 420, audio.currentTime + .18);
+      gain.gain.setValueAtTime(.001, audio.currentTime);
+      gain.gain.exponentialRampToValueAtTime(.22, audio.currentTime + .02);
+      gain.gain.exponentialRampToValueAtTime(.001, audio.currentTime + .24);
+      tone.connect(gain).connect(audio.destination);
+      tone.start();
+      tone.stop(audio.currentTime + .25);
+    }
+
+    function pointStyle(point) {
+      return { left: `${point.x / 8 * 100}%`, top: `${point.y / 9 * 100}%` };
+    }
+
+    function place(el, point) {
+      const style = pointStyle(point);
+      el.style.left = style.left;
+      el.style.top = style.top;
+    }
+
+    function inside(p) { return p.x >= 0 && p.x <= 8 && p.y >= 0 && p.y <= 9; }
+    function same(a, b) { return a.x === b.x && a.y === b.y; }
+    function at(p) { return pieces.find(piece => same(piece, p)); }
+    function selected() { return pieces.find(piece => piece.id === selectedId); }
+    function canLand(piece, p) { const target = at(p); return inside(p) && (!target || target.side !== piece.side); }
+    function palace(side, p) { return p.x >= 3 && p.x <= 5 && (side === "red" ? p.y >= 7 && p.y <= 9 : p.y >= 0 && p.y <= 2); }
+    function crossed(piece) { return piece.side === "red" ? piece.y <= 4 : piece.y >= 5; }
+    function moveLabel(from, to) {
+      if (to.y < from.y) return "进";
+      if (to.y > from.y) return "退";
+      if (to.x < from.x) return "左";
+      return "右";
+    }
+    function makeMove(piece, p, label = "走") {
+      const target = at(p);
+      return { x: p.x, y: p.y, label: target && target.side !== piece.side ? "吃" : label, captureId: target && target.side !== piece.side ? target.id : null };
+    }
+    function stepMoves(piece, deltas, filter = () => true, label = "走") {
+      return deltas.map(([dx, dy]) => ({ x: piece.x + dx, y: piece.y + dy }))
+        .filter(p => canLand(piece, p) && filter(p))
+        .map(p => makeMove(piece, p, label));
+    }
+    function lineMoves(piece) {
+      const moves = [];
+      [[0, -1], [0, 1], [-1, 0], [1, 0]].forEach(([dx, dy]) => {
+        for (let n = 1; n <= 9; n++) {
+          const p = { x: piece.x + dx * n, y: piece.y + dy * n };
+          if (!inside(p)) break;
+          const target = at(p);
+          if (!target) moves.push(makeMove(piece, p, moveLabel(piece, p)));
+          else {
+            if (target.side !== piece.side) moves.push(makeMove(piece, p));
+            break;
+          }
+        }
+      });
+      return moves;
+    }
+    function cannonMoves(piece) {
+      const moves = [];
+      [[0, -1], [0, 1], [-1, 0], [1, 0]].forEach(([dx, dy]) => {
+        let jumped = false;
+        for (let n = 1; n <= 9; n++) {
+          const p = { x: piece.x + dx * n, y: piece.y + dy * n };
+          if (!inside(p)) break;
+          const target = at(p);
+          if (!jumped) {
+            if (target) jumped = true;
+            else moves.push(makeMove(piece, p, moveLabel(piece, p)));
+          } else if (target) {
+            if (target.side !== piece.side) moves.push(makeMove(piece, p));
+            break;
+          }
+        }
+      });
+      return moves;
+    }
+    function horseMoves(piece) {
+      const ps = [
+        { x: piece.x - 2, y: piece.y - 1, leg: { x: piece.x - 1, y: piece.y } },
+        { x: piece.x - 2, y: piece.y + 1, leg: { x: piece.x - 1, y: piece.y } },
+        { x: piece.x + 2, y: piece.y - 1, leg: { x: piece.x + 1, y: piece.y } },
+        { x: piece.x + 2, y: piece.y + 1, leg: { x: piece.x + 1, y: piece.y } },
+        { x: piece.x - 1, y: piece.y - 2, leg: { x: piece.x, y: piece.y - 1 } },
+        { x: piece.x + 1, y: piece.y - 2, leg: { x: piece.x, y: piece.y - 1 } },
+        { x: piece.x - 1, y: piece.y + 2, leg: { x: piece.x, y: piece.y + 1 } },
+        { x: piece.x + 1, y: piece.y + 2, leg: { x: piece.x, y: piece.y + 1 } },
+      ];
+      return ps.filter(p => !at(p.leg) && canLand(piece, p)).map(p => makeMove(piece, p, "日"));
+    }
+    function elephantMoves(piece) {
+      const ps = [
+        { x: piece.x - 2, y: piece.y - 2, eye: { x: piece.x - 1, y: piece.y - 1 } },
+        { x: piece.x + 2, y: piece.y - 2, eye: { x: piece.x + 1, y: piece.y - 1 } },
+        { x: piece.x - 2, y: piece.y + 2, eye: { x: piece.x - 1, y: piece.y + 1 } },
+        { x: piece.x + 2, y: piece.y + 2, eye: { x: piece.x + 1, y: piece.y + 1 } },
+      ];
+      return ps.filter(p => !at(p.eye) && canLand(piece, p) && (piece.side === "red" ? p.y >= 5 : p.y <= 4)).map(p => makeMove(piece, p, "田"));
+    }
+    function soldierMoves(piece) {
+      const f = piece.side === "red" ? -1 : 1;
+      return stepMoves(piece, crossed(piece) ? [[0, f], [-1, 0], [1, 0]] : [[0, f]]);
+    }
+    function legalMoves(piece = selected()) {
+      if (!piece) return [];
+      if (piece.kind === "general") return stepMoves(piece, [[0, -1], [0, 1], [-1, 0], [1, 0]], p => palace(piece.side, p));
+      if (piece.kind === "advisor") return stepMoves(piece, [[-1, -1], [1, -1], [-1, 1], [1, 1]], p => palace(piece.side, p), "斜");
+      if (piece.kind === "elephant") return elephantMoves(piece);
+      if (piece.kind === "rook") return lineMoves(piece);
+      if (piece.kind === "horse") return horseMoves(piece);
+      if (piece.kind === "cannon") return cannonMoves(piece);
+      if (piece.kind === "soldier") return soldierMoves(piece);
+      return [];
+    }
+
+    function generalOf(side) {
+      return pieces.find(piece => piece.side === side && piece.kind === "general");
+    }
+
+    function isInCheck(side) {
+      const general = generalOf(side);
+      if (!general) return false;
+      return pieces
+        .filter(piece => piece.side !== side)
+        .some(piece => legalMoves(piece).some(move => move.x === general.x && move.y === general.y));
+    }
+
+    function announceCheck(side) {
+      sound("check");
+      speak("将军");
+      setStatus(side === "red" ? "小对手将军了！快保护你的帅。" : "将军！黑方的将正在被攻击。", side === "red" ? "bad" : "good");
+    }
+
+    function setStatus(text, tone = "neutral") {
+      statusEl.textContent = text;
+      statusEl.className = `card status ${tone}`;
+    }
+
+    function updateTip(piece) {
+      const tip = piece ? pieceTips[piece.kind] : ["玩法提示", "绿色圆点是可以走的位置，红色圆点代表可以吃子。手机微信里也可以用手指点。"];
+      tipTitle.textContent = tip[0];
+      tipText.textContent = tip[1];
+    }
+
+    function render() {
+      const piece = selected();
+      const moves = piece && turn === "red" && !gameOver ? legalMoves(piece) : [];
+      board.innerHTML = "";
+      for (let x = 0; x <= 8; x++) {
+        const line = document.createElement("span");
+        line.className = "grid-line v";
+        line.style.left = `${x / 8 * 100}%`;
+        board.appendChild(line);
+      }
+      for (let y = 0; y <= 9; y++) {
+        const line = document.createElement("span");
+        line.className = "grid-line h";
+        line.style.top = `${y / 9 * 100}%`;
+        board.appendChild(line);
+      }
+      board.insertAdjacentHTML("beforeend", '<div class="river"><span>楚河</span><span>汉界</span></div><div class="palace a"></div><div class="palace b"></div><div class="palace c"></div><div class="palace d"></div>');
+      moves.forEach(move => {
+        const btn = document.createElement("button");
+        btn.className = `move ${move.captureId ? "capture" : ""}`;
+        btn.textContent = move.label;
+        btn.type = "button";
+        place(btn, move);
+        btn.addEventListener("click", () => completeMove(move));
+        board.appendChild(btn);
+      });
+      pieces.forEach(p => {
+        const btn = document.createElement("button");
+        btn.className = `piece ${p.side} ${p.id === selectedId ? "selected" : ""} ${p.id === lastMoveId ? "last" : ""} ${p.side !== turn ? "dim" : ""}`;
+        btn.type = "button";
+        btn.textContent = p.text;
+        btn.disabled = gameOver || turn !== "red" || p.side !== "red";
+        btn.setAttribute("aria-label", `${p.side === "red" ? "红方" : "黑方"}${p.text}`);
+        place(btn, p);
+        btn.addEventListener("click", () => selectPiece(p.id));
+        board.appendChild(btn);
+      });
+      moveCountEl.textContent = movesMade;
+      capturedEl.innerHTML = captured.length ? captured.map(p => `<span class="tag">${p.text}</span>`).join("") : '<span style="color:#667085">还没有吃子</span>';
+    }
+
+    function selectPiece(id) {
+      const piece = pieces.find(p => p.id === id);
+      if (!piece || piece.side !== "red" || gameOver || turn !== "red") return;
+      selectedId = id;
+      const moves = legalMoves(piece);
+      updateTip(piece);
+      speak(piece.text);
+      setStatus(moves.length ? `选中了红方${piece.text}，有 ${moves.length} 个位置可以走。` : `这颗${piece.text}暂时没有可走位置。`, moves.length ? "good" : "bad");
+      render();
+    }
+
+    function applyMove(piece, move) {
+      const target = move.captureId ? pieces.find(p => p.id === move.captureId) : null;
+      if (target) captured.push(target);
+      pieces = pieces.filter(p => p.id !== move.captureId);
+      piece.x = move.x;
+      piece.y = move.y;
+      movesMade += 1;
+      lastMoveId = piece.id;
+      return target;
+    }
+
+    function completeMove(move) {
+      const piece = selected();
+      const target = applyMove(piece, move);
+      selectedId = null;
+      if (target) sound("capture");
+      if (target?.kind === "general") {
+        win("你吃掉了黑方的将，红方赢了！");
+        return;
+      }
+      turn = "black";
+      if (isInCheck("black")) {
+        announceCheck("black");
+      } else {
+        setStatus(target ? `红方${piece.text}吃掉了${target.text}，小对手正在想。` : `红方${piece.text}走好了，小对手正在想。`, "good");
+      }
+      updateTip(null);
+      render();
+      window.setTimeout(opponentMove, 700);
+    }
+
+    function allMoves(side) {
+      return pieces.filter(p => p.side === side).flatMap(piece => legalMoves(piece).map(move => ({ piece, move })));
+    }
+
+    function capturedBy(move) {
+      return move.captureId ? pieces.find(p => p.id === move.captureId) : null;
+    }
+
+    function randomChoice(items) {
+      return items[Math.floor(Math.random() * items.length)];
+    }
+
+    function distanceToRedGeneral(move) {
+      const general = pieces.find(p => p.side === "red" && p.kind === "general");
+      if (!general) return 0;
+      return Math.abs(move.x - general.x) + Math.abs(move.y - general.y);
+    }
+
+    function withTemporaryMove(option, callback) {
+      const { piece, move } = option;
+      const oldX = piece.x;
+      const oldY = piece.y;
+      const capturedPiece = move.captureId ? pieces.find(p => p.id === move.captureId) : null;
+      const oldPieces = pieces;
+
+      pieces = pieces.filter(p => p.id !== move.captureId);
+      piece.x = move.x;
+      piece.y = move.y;
+
+      const result = callback(capturedPiece);
+
+      piece.x = oldX;
+      piece.y = oldY;
+      pieces = oldPieces;
+
+      return result;
+    }
+
+    function bestReplyCaptureValue(side) {
+      const captures = allMoves(side).map(option => capturedBy(option.move)).filter(Boolean);
+      return captures.length ? Math.max(...captures.map(piece => pieceValue[piece.kind] || 0)) : 0;
+    }
+
+    function moveScore(option) {
+      const target = capturedBy(option.move);
+      let score = Math.random() * 4;
+      if (target) score += pieceValue[target.kind] || 0;
+      if (option.piece.kind === "general" || option.piece.kind === "advisor") score += 4;
+      if (option.piece.kind === "rook" || option.piece.kind === "cannon" || option.piece.kind === "horse") score += 8;
+      score += Math.max(0, 9 - distanceToRedGeneral(option.move));
+      if (option.move.x >= 3 && option.move.x <= 5 && option.move.y >= 6) score += 10;
+      score += withTemporaryMove(option, () => {
+        let simulatedScore = 0;
+        if (isInCheck("red")) simulatedScore += 160;
+        if (isInCheck("black")) simulatedScore -= 120;
+        simulatedScore -= bestReplyCaptureValue("red") * 0.65;
+        return simulatedScore;
+      });
+      return score;
+    }
+
+    function chooseOpponentMove(options) {
+      const captures = options.filter(option => option.move.captureId);
+      const winningMoves = captures.filter(option => capturedBy(option.move)?.kind === "general");
+      if (winningMoves.length) return randomChoice(winningMoves);
+
+      if (difficulty === "easy") {
+        return captures.length && Math.random() < 0.3 ? randomChoice(captures) : randomChoice(options);
+      }
+
+      if (difficulty === "medium") {
+        if (captures.length && Math.random() < 0.75) return randomChoice(captures);
+        const activeMoves = options.filter(option => distanceToRedGeneral(option.move) <= 6);
+        return randomChoice(activeMoves.length ? activeMoves : options);
+      }
+
+      const ranked = [...options].sort((a, b) => moveScore(b) - moveScore(a));
+      const bestPool = ranked.slice(0, Math.min(4, ranked.length));
+      return randomChoice(bestPool);
+    }
+
+    function opponentMove() {
+      const options = allMoves("black");
+      if (!options.length) {
+        win("黑方没有棋可以走了，红方赢了！");
+        return;
+      }
+      const choice = chooseOpponentMove(options);
+      const target = applyMove(choice.piece, choice.move);
+      if (target) sound("capture");
+      if (target?.kind === "general") {
+        lose("小对手吃掉了你的帅，这一盘你输了。");
+        return;
+      }
+      turn = "red";
+      if (isInCheck("red")) {
+        announceCheck("red");
+      } else {
+        setStatus(target ? `小对手用${choice.piece.text}吃掉了你的${target.text}。轮到红方。` : `小对手走了${choice.piece.text}。轮到红方。`);
+      }
+      render();
+    }
+
+    function win(text) {
+      gameOver = true;
+      turn = "red";
+      selectedId = null;
+      sound("win");
+      speak("太棒了，你赢了！");
+      setStatus(text, "good");
+      render();
+    }
+
+    function lose(text) {
+      gameOver = true;
+      turn = "red";
+      selectedId = null;
+      speak("这一盘输了，再来一次。");
+      setStatus(text, "bad");
+      render();
+    }
+
+    function reset() {
+      pieces = startingPieces.map(p => ({ ...p }));
+      selectedId = null;
+      turn = "red";
+      movesMade = 0;
+      captured = [];
+      gameOver = false;
+      lastMoveId = null;
+      updateTip(null);
+      setStatus(`当前对手：${difficultyNames[difficulty]}。轮到红方，点一颗红棋开始。`);
+      render();
+    }
+
+    restartBtn.addEventListener("click", reset);
+    voiceBtn.addEventListener("click", () => {
+      soundOn = !soundOn;
+      voiceBtn.textContent = soundOn ? "声音开" : "声音关";
+      if (soundOn) speak("声音已打开");
+    });
+
+    levelButtons.forEach(button => {
+      button.addEventListener("click", () => {
+        difficulty = button.dataset.level;
+        levelButtons.forEach(item => item.classList.toggle("active", item === button));
+        setStatus(`已切换到${difficultyNames[difficulty]}对手。点“重新开始”会从新难度开局。`, "good");
+        speak(`${difficultyNames[difficulty]}对手`);
+      });
+    });
+
+    reset();
+  </script>
+</body>
+</html>
