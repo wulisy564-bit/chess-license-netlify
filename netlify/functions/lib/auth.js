@@ -30,6 +30,26 @@ function parseCookies(header = "") {
   return cookies;
 }
 
+function getQuery(event) {
+  const query = { ...(event.queryStringParameters || {}) };
+  const raw = event.rawQuery || event.rawQueryString || "";
+
+  if (raw) {
+    for (const [key, value] of new URLSearchParams(raw)) {
+      if (!(key in query)) query[key] = value;
+    }
+  }
+
+  const rawUrl = event.rawUrl || "";
+  if (rawUrl.includes("?")) {
+    for (const [key, value] of new URL(rawUrl).searchParams) {
+      if (!(key in query)) query[key] = value;
+    }
+  }
+
+  return query;
+}
+
 function setSessionCookie(token) {
   return `chess_session=${encodeURIComponent(token)}; HttpOnly; SameSite=Lax; Secure; Path=/; Max-Age=2592000`;
 }
@@ -57,7 +77,7 @@ function publicUser(user) {
 
 async function getAuth(event) {
   const headers = event.headers || {};
-  const query = event.queryStringParameters || {};
+  const query = getQuery(event);
   const authorization = headers.authorization || headers.Authorization || "";
   const bearer = authorization.startsWith("Bearer ") ? authorization.slice(7) : "";
   const token = parseCookies(headers.cookie || headers.Cookie || "").chess_session || bearer || query.token;
@@ -77,7 +97,7 @@ function requireAccessResponse(event, auth) {
   if (!auth) return json(401, { ok: false, message: "请先登录" });
 
   const headers = event.headers || {};
-  const query = event.queryStringParameters || {};
+  const query = getQuery(event);
   const deviceId = headers["x-device-id"] || headers["X-Device-Id"] || query.deviceId;
 
   if (!auth.user.hasAccess) {
