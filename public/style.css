@@ -136,6 +136,13 @@ input {
   font-weight: 700;
 }
 
+.inline-play {
+  display: inline-block;
+  margin-top: 8px;
+  color: #187052;
+  font-weight: 700;
+}
+
 .features {
   max-width: 1040px;
   margin: 0 auto 24px;

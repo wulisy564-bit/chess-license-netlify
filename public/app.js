@@ -28,6 +28,10 @@ function clearSessionToken() {
   localStorage.removeItem("chess_session_token");
 }
 
+function getPlayUrl() {
+  return `/.netlify/functions/play?deviceId=${encodeURIComponent(getDeviceId())}&token=${encodeURIComponent(getSessionToken())}`;
+}
+
 async function api(path, options = {}) {
   const response = await fetch(path, {
     credentials: "include",
@@ -54,7 +58,7 @@ function setTab(tab) {
 function render(user) {
   logoutButton.classList.toggle("hidden", !user);
 playLink.classList.toggle("hidden", !user?.hasAccess);
-  playLink.href = `/.netlify/functions/play?deviceId=${encodeURIComponent(getDeviceId())}&token=${encodeURIComponent(getSessionToken())}`;
+  playLink.href = getPlayUrl();
 
   if (!user) {
     statusBox.textContent = "未登录。请先用手机号登录。";
@@ -63,7 +67,7 @@ playLink.classList.toggle("hidden", !user?.hasAccess);
   }
 
   if (user.hasAccess) {
-    statusBox.textContent = `已登录 ${user.phone}，已解锁 ${user.plan || "完整"} 权限。`;
+    statusBox.innerHTML = `已登录 ${user.phone}，已解锁 ${user.plan || "完整"} 权限。<br><a class="inline-play" href="${getPlayUrl()}">点击这里进入游戏</a>`;
     return;
   }
 
@@ -83,8 +87,7 @@ playLink.addEventListener("click", async (event) => {
       body: "{}"
     });
     setSessionToken(data.token);
-    const url = `/.netlify/functions/play?deviceId=${encodeURIComponent(getDeviceId())}&token=${encodeURIComponent(getSessionToken())}`;
-    window.location.href = url;
+    window.location.href = getPlayUrl();
   } catch (error) {
     statusBox.textContent = error.message;
   }
