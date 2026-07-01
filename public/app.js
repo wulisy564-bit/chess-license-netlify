@@ -86,7 +86,25 @@ async function enterGame() {
       body: "{}"
     });
     setSessionToken(data.token);
-    window.location.href = getPlayUrl();
+    const response = await fetch("/.netlify/functions/play", {
+      credentials: "include",
+      headers: {
+        authorization: `Bearer ${getSessionToken()}`,
+        "x-device-id": getDeviceId()
+      }
+    });
+    const html = await response.text();
+    if (!response.ok) {
+      try {
+        const payload = JSON.parse(html);
+        throw new Error(payload.message || "进入游戏失败");
+      } catch (parseError) {
+        throw new Error(parseError.message || "进入游戏失败");
+      }
+    }
+    document.open();
+    document.write(html);
+    document.close();
   } catch (error) {
     statusBox.innerHTML = `${error.message}<br><span style="color:#625b52">如果你换了手机或换了浏览器，需要重新兑换或让我帮你重置设备。</span>`;
   }

@@ -46,7 +46,7 @@ function parseTokenAndDevice(event) {
 
   return {
     token: query.token || parseCookies(headers.cookie || headers.Cookie || "").chess_session || parseBearer(headers.authorization || headers.Authorization || ""),
-    deviceId: query.deviceId || ""
+    deviceId: query.deviceId || headers["x-device-id"] || headers["X-Device-Id"] || ""
   };
 }
 
@@ -66,14 +66,14 @@ function parseBearer(value = "") {
 
 async function getPlayAuth(event) {
   const { token, deviceId } = parseTokenAndDevice(event);
-  if (!token) return { error: json(401, { ok: false, message: "请先登录" }) };
+  if (!token) return { error: json(401, { ok: false, message: "请先登录", reason: "missing-token" }) };
 
   const db = await readDb();
   const session = db.sessions[token];
-  if (!session) return { error: json(401, { ok: false, message: "请先登录" }) };
+  if (!session) return { error: json(401, { ok: false, message: "请先登录", reason: "missing-session", tokenPrefix: token.slice(0, 8) }) };
 
   const user = db.users[session.phone];
-  if (!user) return { error: json(401, { ok: false, message: "请先登录" }) };
+  if (!user) return { error: json(401, { ok: false, message: "请先登录", reason: "missing-user" }) };
   if (!user.hasAccess) return { error: json(403, { ok: false, message: "请先购买或输入兑换码" }) };
   if (!deviceId || user.deviceId !== deviceId) {
     return { error: json(403, { ok: false, message: "这份授权已绑定到另一台设备" }) };
