@@ -2,13 +2,19 @@ const crypto = require("crypto");
 const { readDb } = require("./storage");
 
 function json(statusCode, body, extraHeaders = {}) {
+  const cookie = extraHeaders["set-cookie"] || extraHeaders["Set-Cookie"];
+  const headers = { ...extraHeaders };
+  delete headers["set-cookie"];
+  delete headers["Set-Cookie"];
+
   return {
     statusCode,
     headers: {
       "content-type": "application/json; charset=utf-8",
       "cache-control": "no-store",
-      ...extraHeaders
+      ...headers
     },
+    ...(cookie ? { multiValueHeaders: { "Set-Cookie": [cookie] } } : {}),
     body: JSON.stringify(body)
   };
 }
@@ -66,7 +72,8 @@ function requireAccessResponse(event, auth) {
   if (!auth) return json(401, { ok: false, message: "请先登录" });
 
   const headers = event.headers || {};
-  const deviceId = headers["x-device-id"] || headers["X-Device-Id"];
+  const query = event.queryStringParameters || {};
+  const deviceId = headers["x-device-id"] || headers["X-Device-Id"] || query.deviceId;
 
   if (!auth.user.hasAccess) {
     return json(403, { ok: false, message: "请先购买或输入兑换码" });
