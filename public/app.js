@@ -29,6 +29,18 @@ function clearSessionToken() {
   localStorage.removeItem("chess_session_token");
 }
 
+function getGrant() {
+  return localStorage.getItem("chess_game_grant") || "";
+}
+
+function setGrant(grant) {
+  if (grant) localStorage.setItem("chess_game_grant", grant);
+}
+
+function clearGrant() {
+  localStorage.removeItem("chess_game_grant");
+}
+
 function getSavedPhone() {
   return localStorage.getItem("chess_user_phone") || currentUser?.phone || "";
 }
@@ -102,7 +114,8 @@ async function enterGame() {
       headers: {
         authorization: `Bearer ${getSessionToken()}`,
         "x-device-id": getDeviceId(),
-        "x-phone": getSavedPhone()
+        "x-phone": getSavedPhone(),
+        "x-grant": getGrant()
       }
     });
     const html = await response.text();
@@ -143,6 +156,7 @@ loginForm.addEventListener("submit", async (event) => {
       body: JSON.stringify({ phone })
     });
     setSessionToken(data.token);
+    setGrant(data.grant);
     setSavedPhone(data.user?.phone);
     render(data.user);
   } catch (error) {
@@ -160,6 +174,7 @@ redeemForm.addEventListener("submit", async (event) => {
       body: JSON.stringify({ code, deviceId: getDeviceId() })
     });
     setSessionToken(data.token);
+    setGrant(data.grant);
     setSavedPhone(data.user?.phone);
     render(data.user);
   } catch (error) {
@@ -170,6 +185,7 @@ redeemForm.addEventListener("submit", async (event) => {
 logoutButton.addEventListener("click", async () => {
   await api("/api/logout", { method: "POST", body: "{}" });
   clearSessionToken();
+  clearGrant();
   clearSavedPhone();
   render(null);
 });
@@ -177,6 +193,7 @@ logoutButton.addEventListener("click", async () => {
 api("/api/me")
   .then((data) => {
     setSessionToken(data.token);
+    setGrant(data.grant);
     setSavedPhone(data.user?.phone);
     render(data.user);
   })

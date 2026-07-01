@@ -1,6 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 const { readDb } = require("./lib/storage");
+const { verifyGrant } = require("./lib/grant");
 
 function findGameFile() {
   const candidates = [
@@ -46,7 +47,8 @@ function parseTokenAndDevice(event) {
 
   return {
     token: query.token || parseCookies(headers.cookie || headers.Cookie || "").chess_session || parseBearer(headers.authorization || headers.Authorization || ""),
-    deviceId: query.deviceId || headers["x-device-id"] || headers["X-Device-Id"] || ""
+    deviceId: query.deviceId || headers["x-device-id"] || headers["X-Device-Id"] || "",
+    grant: headers["x-grant"] || headers["X-Grant"] || query.grant || ""
   };
 }
 
@@ -65,7 +67,10 @@ function parseBearer(value = "") {
 }
 
 async function getPlayAuth(event) {
-  const { token, deviceId } = parseTokenAndDevice(event);
+  const { token, deviceId, grant } = parseTokenAndDevice(event);
+  const grantPayload = verifyGrant(grant, deviceId);
+  if (grantPayload) return { user: { phone: grantPayload.phone, plan: grantPayload.plan } };
+
   const headers = event.headers || {};
   const phone = String(headers["x-phone"] || headers["X-Phone"] || "").replace(/[^\d+]/g, "").slice(0, 24);
 

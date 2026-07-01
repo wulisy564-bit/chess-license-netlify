@@ -9,6 +9,7 @@ const {
   setSessionCookie
 } = require("./lib/auth");
 const { readDb, writeDb } = require("./lib/storage");
+const { createGrant } = require("./lib/grant");
 
 function parseBody(event) {
   if (!event.body) return {};
@@ -42,7 +43,8 @@ exports.handler = async (event) => {
       db.users[phone].activeSession = token;
       await writeDb(db);
 
-      return json(200, { ok: true, token, user: publicUser(db.users[phone]) }, {
+      const user = db.users[phone];
+      return json(200, { ok: true, token, grant: user.hasAccess && user.deviceId ? createGrant(user, user.deviceId) : null, user: publicUser(user) }, {
         "set-cookie": setSessionCookie(token)
       });
     }
@@ -59,7 +61,12 @@ exports.handler = async (event) => {
 
     if (method === "GET" && route === "me") {
       const auth = await getAuth(event);
-      return json(200, { ok: true, token: auth ? auth.token : null, user: auth ? publicUser(auth.user) : null });
+      return json(200, {
+        ok: true,
+        token: auth ? auth.token : null,
+        grant: auth && auth.user.hasAccess && auth.user.deviceId ? createGrant(auth.user, auth.user.deviceId) : null,
+        user: auth ? publicUser(auth.user) : null
+      });
     }
 
     if (method === "POST" && route === "redeem") {
@@ -92,7 +99,7 @@ exports.handler = async (event) => {
       auth.user.deviceId = deviceId;
       await writeDb(auth.db);
 
-      return json(200, { ok: true, token: auth.token, user: publicUser(auth.user) });
+      return json(200, { ok: true, token: auth.token, grant: createGrant(auth.user, deviceId), user: publicUser(auth.user) });
     }
 
     if (method === "POST" && route === "check-access") {
@@ -109,7 +116,7 @@ exports.handler = async (event) => {
       }
       const blocked = requireAccessResponse(event, auth);
       if (blocked) return blocked;
-      return json(200, { ok: true, token: auth.token, user: publicUser(auth.user) });
+      return json(200, { ok: true, token: auth.token, grant: createGrant(auth.user, auth.user.deviceId), user: publicUser(auth.user) });
     }
 
     return json(404, { ok: false, message: "API not found" });
