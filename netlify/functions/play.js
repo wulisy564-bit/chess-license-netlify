@@ -66,19 +66,19 @@ function parseBearer(value = "") {
 
 async function getPlayAuth(event) {
   const { token, deviceId } = parseTokenAndDevice(event);
-  if (!token) return { error: json(401, { ok: false, message: "请先登录", reason: "missing-token" }) };
+  const headers = event.headers || {};
+  const phone = String(headers["x-phone"] || headers["X-Phone"] || "").replace(/[^\d+]/g, "").slice(0, 24);
 
   const db = await readDb();
-  const session = db.sessions[token];
-  if (!session) return { error: json(401, { ok: false, message: "请先登录", reason: "missing-session", tokenPrefix: token.slice(0, 8) }) };
+  const session = token ? db.sessions[token] : null;
 
-  const user = db.users[session.phone];
+  const user = session ? db.users[session.phone] : db.users[phone];
   if (!user) return { error: json(401, { ok: false, message: "请先登录", reason: "missing-user" }) };
   if (!user.hasAccess) return { error: json(403, { ok: false, message: "请先购买或输入兑换码" }) };
   if (!deviceId || user.deviceId !== deviceId) {
     return { error: json(403, { ok: false, message: "这份授权已绑定到另一台设备" }) };
   }
-  if (user.activeSession && user.activeSession !== token) {
+  if (token && user.activeSession && user.activeSession !== token) {
     return { error: json(409, { ok: false, message: "这个账号已在另一处登录，请重新登录确认" }) };
   }
 

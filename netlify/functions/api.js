@@ -96,7 +96,17 @@ exports.handler = async (event) => {
     }
 
     if (method === "POST" && route === "check-access") {
-      const auth = await getAuth(event);
+      let auth = await getAuth(event);
+      if (!auth) {
+        const headers = event.headers || {};
+        const phone = normalizePhone(headers["x-phone"] || headers["X-Phone"] || "");
+        const deviceId = headers["x-device-id"] || headers["X-Device-Id"] || "";
+        const db = await readDb();
+        const user = db.users[phone];
+        if (user && user.hasAccess && user.deviceId === deviceId) {
+          auth = { db, token: user.activeSession || "", user };
+        }
+      }
       const blocked = requireAccessResponse(event, auth);
       if (blocked) return blocked;
       return json(200, { ok: true, token: auth.token, user: publicUser(auth.user) });
