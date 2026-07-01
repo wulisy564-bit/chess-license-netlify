@@ -54,7 +54,7 @@ function setTab(tab) {
 function render(user) {
   logoutButton.classList.toggle("hidden", !user);
   playLink.classList.toggle("hidden", !user?.hasAccess);
-  playLink.href = `/play?deviceId=${encodeURIComponent(getDeviceId())}&token=${encodeURIComponent(getSessionToken())}`;
+  playLink.href = `/.netlify/functions/play?deviceId=${encodeURIComponent(getDeviceId())}&token=${encodeURIComponent(getSessionToken())}`;
 
   if (!user) {
     statusBox.textContent = "未登录。请先用手机号登录。";
