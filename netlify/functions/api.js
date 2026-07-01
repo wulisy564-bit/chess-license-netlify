@@ -59,7 +59,7 @@ exports.handler = async (event) => {
 
     if (method === "GET" && route === "me") {
       const auth = await getAuth(event);
-      return json(200, { ok: true, user: auth ? publicUser(auth.user) : null });
+      return json(200, { ok: true, token: auth ? auth.token : null, user: auth ? publicUser(auth.user) : null });
     }
 
     if (method === "POST" && route === "redeem") {

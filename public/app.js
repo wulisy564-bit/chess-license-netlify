@@ -113,5 +113,8 @@ logoutButton.addEventListener("click", async () => {
 });
 
 api("/api/me")
-  .then((data) => render(data.user))
+  .then((data) => {
+    setSessionToken(data.token);
+    render(data.user);
+  })
   .catch(() => render(null));
