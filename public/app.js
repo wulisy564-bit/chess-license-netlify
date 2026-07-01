@@ -78,8 +78,7 @@ playLink.classList.toggle("hidden", !user?.hasAccess);
 loginTab.addEventListener("click", () => setTab("login"));
 redeemTab.addEventListener("click", () => setTab("redeem"));
 
-playLink.addEventListener("click", async (event) => {
-  event.preventDefault();
+async function enterGame() {
   statusBox.textContent = "正在进入游戏...";
   try {
     const data = await api("/api/check-access", {
@@ -89,8 +88,19 @@ playLink.addEventListener("click", async (event) => {
     setSessionToken(data.token);
     window.location.href = getPlayUrl();
   } catch (error) {
-    statusBox.textContent = error.message;
+    statusBox.innerHTML = `${error.message}<br><span style="color:#625b52">如果你换了手机或换了浏览器，需要重新兑换或让我帮你重置设备。</span>`;
   }
+}
+
+playLink.addEventListener("click", async (event) => {
+  event.preventDefault();
+  enterGame();
+});
+
+statusBox.addEventListener("click", async (event) => {
+  if (!event.target.closest(".inline-play")) return;
+  event.preventDefault();
+  enterGame();
 });
 
 loginForm.addEventListener("submit", async (event) => {
