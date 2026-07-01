@@ -20,7 +20,18 @@ function findGameFile() {
 exports.handler = async (event) => {
   const auth = await getAuth(event);
   const blocked = requireAccessResponse(event, auth);
-  if (blocked) return blocked;
+  if (blocked) {
+    if (blocked.statusCode === 401) {
+      return {
+        statusCode: 302,
+        headers: {
+          location: "/"
+        },
+        body: ""
+      };
+    }
+    return blocked;
+  }
 
   const gamePath = findGameFile();
   const html = fs.readFileSync(gamePath, "utf8");

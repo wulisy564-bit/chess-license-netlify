@@ -6,6 +6,7 @@ function json(statusCode, body, extraHeaders = {}) {
   const headers = { ...extraHeaders };
   delete headers["set-cookie"];
   delete headers["Set-Cookie"];
+  if (cookie) headers["Set-Cookie"] = cookie;
 
   return {
     statusCode,
